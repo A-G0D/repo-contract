@@ -1,0 +1,43 @@
+name: Bug report
+description: Report a defect in repo-contract
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please do **not** include private repository content, credentials,
+        or personal information. A synthetic document snippet is enough.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: The command, the expected classification/output, and the actual result.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: A minimal repository layout and/or the document snippet that triggers the issue.
+      placeholder: |
+        repo/CONTRIBUTING.md:
+        "Autonomous agents are not allowed ..."
+
+        repo-contract scan --repo repo
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: repo-contract version / commit
+      placeholder: "0.1.0 or git sha"
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python version and OS
+      placeholder: "3.12.4 on macOS 15"
+    validations:
+      required: true

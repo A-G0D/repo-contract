@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "repo-contract"
+version = "0.1.0"
+description = "Read a repository's contribution contract before an agent contributes: AI policy, commands, commit style, and PR rules."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "A-G0D" }]
+keywords = ["agents", "ai", "contributing", "policy", "repository", "developer-tools"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[project.scripts]
+repo-contract = "repo_contract.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/A-G0D/repo-contract"
+Issues = "https://github.com/A-G0D/repo-contract/issues"
+Changelog = "https://github.com/A-G0D/repo-contract/blob/main/CHANGELOG.md"
+
+[tool.setuptools.packages.find]
+include = ["repo_contract*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "W", "I"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E402"]
+"demo/*" = ["E402"]

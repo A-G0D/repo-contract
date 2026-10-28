@@ -1,0 +1,36 @@
+name: Feature request
+description: Suggest a document source, extraction rule, or output format
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: |
+        What does repo-contract miss or get wrong? Example: a project states its AI policy in
+        `.github/AI.md`, or uses a PR template layout that yields no sections.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: |
+        If this changes classification, describe the snippet that should match and how the tool
+        should avoid false "forbidden" positives.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Confirmations
+      options:
+        - label: This keeps the tool offline and read-only.
+          required: true
+        - label: This does not make ambiguous AI mentions classify as forbidden.
+          required: true
