@@ -230,7 +230,10 @@ def detect_remote(repo: str) -> str:
     if proc.returncode != 0:
         return ""
     url = proc.stdout.strip()
-    parts = urlsplit(url)
+    try:
+        parts = urlsplit(url)
+    except ValueError:  # e.g. unbalanced IPv6 brackets: report no usable remote
+        return ""
     if parts.scheme in ("http", "https") and parts.username is not None:
         # drop userinfo (user:token@) so credentials never reach the contract
         url = urlunsplit(parts._replace(netloc=parts.netloc.rpartition("@")[2]))

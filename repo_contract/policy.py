@@ -93,7 +93,7 @@ def load_patterns(source: str) -> dict[str, tuple[str, ...]]:
             entries = json.load(fh)
     except OSError as exc:
         raise ValueError(f"cannot read patterns file {source!r}: {exc.strerror}") from exc
-    except json.JSONDecodeError as exc:
+    except (json.JSONDecodeError, RecursionError) as exc:  # deep nesting overflows the parser
         raise ValueError(f"patterns file {source!r} is not valid JSON: {exc}") from exc
     if not isinstance(entries, list):
         raise ValueError(f"patterns file {source!r} must be a JSON list of objects")
@@ -108,7 +108,7 @@ def load_patterns(source: str) -> dict[str, tuple[str, ...]]:
             raise ValueError(f"{source!r} entry {i}: pattern must be a non-empty string")
         try:
             re.compile(pattern)
-        except re.error as exc:
+        except (re.error, RecursionError) as exc:  # deeply nested groups overflow re's compiler
             raise ValueError(f"{source!r} entry {i}: bad regex: {exc}") from exc
         extra[entry["category"]].append(pattern)
     return {c: tuple(v) for c, v in extra.items()}
