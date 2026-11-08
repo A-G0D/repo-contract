@@ -229,14 +229,14 @@ def detect_remote(repo: str) -> str:
     return proc.stdout.strip() if proc.returncode == 0 else ""
 
 
-def build_contract(repo: str) -> dict:
+def build_contract(repo: str, extra_patterns: dict | None = None) -> dict:
     """Build the full contract for a repository path."""
     repo = os.path.abspath(repo)
     if not os.path.isdir(repo):
         raise ValueError(f"not a directory: {repo}")
     docs = find_docs(repo)
     docs_txt = docs_text(repo, docs)
-    ai_policy = classify(docs_txt)
+    ai_policy = classify(docs_txt, extra_patterns)
     return {
         "repo": repo,
         "name": os.path.basename(repo.rstrip(os.sep)) or repo,
@@ -265,6 +265,7 @@ def render_markdown(contract: dict) -> str:
         f"{'YES' if ai['agent_contributions_allowed'] else 'NO'}** "
         f"(AI policy: `{ai['category']}`)",
         f"- AI policy evidence: {ai['evidence'] or '(none found)'}",
+        *[f"  - {snip}" for snip in ai["evidence_snippets"][1:]],
         f"- disclosure required: {ai['requires_disclosure']}",
         "",
         "## Commands",

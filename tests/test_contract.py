@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import os
 import shutil
@@ -15,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from repo_contract.cli import main
 from repo_contract.contract import build_contract, extract_commands, render_markdown
 from repo_contract.docs import find_docs, walk_files
-from repo_contract.policy import classify
+from repo_contract.policy import classify, load_patterns
 
 FORBIDDEN = """# AI Policy
 
@@ -189,6 +191,121 @@ class TestContract(unittest.TestCase):
     def test_bad_path_raises(self):
         with self.assertRaises(ValueError):
             build_contract(os.path.join(self.tmp, "does-not-exist"))
+
+TWO_RULES = """# Contributing
+
+Autonomous agents are not allowed to be used for contributing to this project.
+
+## Later section
+
+AI-generated pull requests are not accepted. Autonomous agents are not allowed here either.
+"""
+
+
+class TestEvidence(unittest.TestCase):
+    def test_all_snippets_returned_in_document_order(self):
+        res = classify(TWO_RULES)
+        self.assertEqual(res["category"], "forbidden_autonomous")
+        self.assertEqual(len(res["evidence_snippets"]), 3)
+        self.assertEqual(
+            res["evidence_snippets"][0],
+            "Autonomous agents are not allowed",
+        )
+        self.assertIn("AI-generated pull requests are not accepted", res["evidence_snippets"][1])
+
+    def test_evidence_string_stays_first_snippet(self):
+        res = classify(TWO_RULES)
+        self.assertEqual(res["evidence"], res["evidence_snippets"][0])
+
+    def test_hashes_match_snippets_and_are_stable(self):
+        res = classify(TWO_RULES)
+        self.assertEqual(len(res["evidence_sha256"]), 3)
+        self.assertEqual(res["evidence_sha256"], classify(TWO_RULES)["evidence_sha256"])
+        self.assertEqual(len(res["evidence_sha256"][0]), 64)
+
+    def test_no_evidence_gives_empty_list(self):
+        self.assertEqual(classify("Nothing here.")["evidence_snippets"], [])
+
+    def test_cli_text_notes_more(self):
+        tmp = tempfile.mkdtemp(prefix="rc-ev-")
+        self.addCleanup(shutil.rmtree, tmp, True)
+        repo = make_repo(tmp)
+        with open(os.path.join(repo, "CONTRIBUTING.md"), "w", encoding="utf-8") as fh:
+            fh.write(TWO_RULES)
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            main(["scan", "--repo", repo])
+        self.assertIn("(+2 more, see --format json)", buf.getvalue())
+
+
+ES_DOC = """# Contribuir
+
+Los agentes autonomos no estan permitidos en este proyecto.
+"""
+
+
+class TestPatterns(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="rc-pat-")
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+
+    def _write(self, name, text):
+        path = os.path.join(self.tmp, name)
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write(text)
+        return path
+
+    def test_default_is_english_only(self):
+        self.assertEqual(classify(ES_DOC)["category"], "unknown")
+
+    def test_custom_pattern_file(self):
+        path = self._write(
+            "p.json",
+            json.dumps(
+                [
+                    {
+                        "language": "es",
+                        "category": "forbidden_autonomous",
+                        "pattern": "agentes autonomos no estan permitidos",
+                        "label": "es-forbid",
+                    }
+                ]
+            ),
+        )
+        extra = load_patterns(path)
+        res = classify(ES_DOC, extra)
+        self.assertEqual(res["category"], "forbidden_autonomous")
+        self.assertIn("agentes autonomos no estan permitidos", res["evidence"].lower())
+        self.assertFalse(res["agent_contributions_allowed"])
+
+    def test_malformed_file_raises_value_error(self):
+        for text in ("not json", "{}", '[{"category": "bogus", "pattern": "x"}]',
+                     '[{"category": "human_in_loop", "pattern": "("}]'):
+            with self.assertRaises(ValueError, msg=text):
+                load_patterns(self._write("bad.json", text))
+
+    def test_cli_bad_patterns_exit_2(self):
+        repo = make_repo(self.tmp)
+        bad = self._write("bad.json", "nope")
+        self.assertEqual(main(["scan", "--repo", repo, "--patterns", bad]), 2)
+
+    def test_shipped_sets_load_and_classify(self):
+        cases = {
+            "es": "Los agentes autonomos no estan permitidos en este proyecto.",
+            "de": "Autonome Agenten sind in diesem Projekt nicht erlaubt.",
+        }
+        for name, text in cases.items():
+            res = classify(text, load_patterns(name))
+            self.assertEqual(res["category"], "forbidden_autonomous", name)
+
+    def test_cli_with_shipped_set(self):
+        repo = make_repo(self.tmp)
+        with open(os.path.join(repo, "CONTRIBUTING.md"), "w", encoding="utf-8") as fh:
+            fh.write(ES_DOC)
+        self.assertEqual(main(["scan", "--repo", repo, "--fail-if-forbidden", "--quiet"]), 0)
+        self.assertEqual(
+            main(["scan", "--repo", repo, "--fail-if-forbidden", "--quiet", "--patterns", "es"]), 3
+        )
 
 
 class TestCli(unittest.TestCase):

@@ -16,6 +16,9 @@ the repository's own words visible to the person (or agent) about to contribute:
 
 from __future__ import annotations
 
+import hashlib
+import json
+import os
 import re
 
 FORBIDDEN_PATTERNS: tuple[str, ...] = (
@@ -51,22 +54,78 @@ DISCLOSURE_PATTERNS: tuple[str, ...] = (
 AI_MENTION = re.compile(r"(?i)\bAI\b|\bLLMs?\b|\blanguage models?\b|ChatGPT|Copilot|Claude")
 
 
-def _first_match(text: str, patterns: tuple[str, ...]) -> str:
-    for pattern in patterns:
-        match = re.search(pattern, text, re.I)
-        if match:
-            return match.group(0).strip()[:400]
-    return ""
+SNIPPET_MAX = 400
+CATEGORIES = ("forbidden_autonomous", "human_in_loop", "disclosure")
 
 
-def classify(text: str) -> dict:
-    """Return ``{category, evidence, requires_disclosure, mentions_ai}`` for the given docs text."""
-    evidence = _first_match(text, FORBIDDEN_PATTERNS)
-    if evidence:
+def _matches(text: str, patterns: tuple[str, ...]) -> list[str]:
+    """Every non-overlapping match of any pattern, in document order, truncated per snippet."""
+    spans = sorted(
+        (m.start(), m.end())
+        for pattern in patterns
+        for m in re.finditer(pattern, text, re.I)
+        if m.group(0).strip()
+    )
+    out: list[str] = []
+    last_end = -1
+    for start, end in spans:
+        if start >= last_end:
+            out.append(text[start:end].strip()[:SNIPPET_MAX])
+            last_end = end
+    return out
+
+
+def load_patterns(source: str) -> dict[str, tuple[str, ...]]:
+    """Load extra patterns from a JSON file or a shipped set name (``es``, ``de``).
+
+    The file is a list of ``{language, category, pattern, label}`` objects; ``category`` is one of
+    ``forbidden_autonomous``, ``human_in_loop``, ``disclosure``. Raises ``ValueError`` on bad input.
+    """
+    path = source
+    if not os.path.isfile(path):
+        path = os.path.join(os.path.dirname(__file__), "patterns", f"{source}.json")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            entries = json.load(fh)
+    except OSError as exc:
+        raise ValueError(f"cannot read patterns file {source!r}: {exc.strerror}") from exc
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"patterns file {source!r} is not valid JSON: {exc}") from exc
+    if not isinstance(entries, list):
+        raise ValueError(f"patterns file {source!r} must be a JSON list of objects")
+    extra: dict[str, list[str]] = {c: [] for c in CATEGORIES}
+    for i, entry in enumerate(entries):
+        if not isinstance(entry, dict) or entry.get("category") not in CATEGORIES:
+            raise ValueError(
+                f"{source!r} entry {i}: category must be one of {', '.join(CATEGORIES)}"
+            )
+        pattern = entry.get("pattern")
+        if not isinstance(pattern, str) or not pattern:
+            raise ValueError(f"{source!r} entry {i}: pattern must be a non-empty string")
+        try:
+            re.compile(pattern)
+        except re.error as exc:
+            raise ValueError(f"{source!r} entry {i}: bad regex: {exc}") from exc
+        extra[entry["category"]].append(pattern)
+    return {c: tuple(v) for c, v in extra.items()}
+
+
+def classify(text: str, extra: dict[str, tuple[str, ...]] | None = None) -> dict:
+    """Classify docs text. ``extra`` adds opt-in patterns (see ``load_patterns``).
+
+    ``evidence`` is the first snippet (0.1.0 contract); ``evidence_snippets`` holds all of them in
+    document order and ``evidence_sha256`` their hashes, so reports compare across scans.
+    """
+    extra = extra or {}
+    forbidden = FORBIDDEN_PATTERNS + extra.get("forbidden_autonomous", ())
+    human = HUMAN_IN_LOOP_PATTERNS + extra.get("human_in_loop", ())
+    disclosure = DISCLOSURE_PATTERNS + extra.get("disclosure", ())
+    snippets = _matches(text, forbidden)
+    if snippets:
         category = "forbidden_autonomous"
     else:
-        evidence = _first_match(text, HUMAN_IN_LOOP_PATTERNS)
-        if evidence:
+        snippets = _matches(text, human)
+        if snippets:
             category = "human_in_loop"
         elif AI_MENTION.search(text):
             category = "ai_mentioned"
@@ -74,8 +133,10 @@ def classify(text: str) -> dict:
             category = "unknown"
     return {
         "category": category,
-        "evidence": evidence,
-        "requires_disclosure": bool(_first_match(text, DISCLOSURE_PATTERNS)),
+        "evidence": snippets[0] if snippets else "",
+        "evidence_snippets": snippets,
+        "evidence_sha256": [hashlib.sha256(s.encode("utf-8")).hexdigest() for s in snippets],
+        "requires_disclosure": bool(_matches(text, disclosure)),
         "mentions_ai": bool(AI_MENTION.search(text)),
         "agent_contributions_allowed": category != "forbidden_autonomous",
     }

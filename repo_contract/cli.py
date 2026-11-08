@@ -1,4 +1,4 @@
-"""repo-contract CLI: read a repository's contract, optionally enforce its AI policy."""
+"""repo-contract CLI."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ import sys
 
 from . import __version__
 from .contract import build_contract, render_markdown
+from .policy import load_patterns
 
 EXIT_FORBIDDEN = 3
 
@@ -24,7 +25,9 @@ def _render_text(contract: dict, *, quiet: bool = False) -> str:
         f"{'allowed' if ai['agent_contributions_allowed'] else 'FORBIDDEN'}",
     ]
     if ai["evidence"]:
-        lines.append(f"  evidence: {ai['evidence']}")
+        more = len(ai["evidence_snippets"]) - 1
+        suffix = f" (+{more} more, see --format json)" if more > 0 else ""
+        lines.append(f"  evidence: {ai['evidence']}{suffix}")
     if not quiet:
         if contract["policy_sources"]:
             lines.append(f"  policy docs: {', '.join(contract['policy_sources'])}")
@@ -50,7 +53,8 @@ def _render_text(contract: dict, *, quiet: bool = False) -> str:
 
 def cmd_scan(args: argparse.Namespace) -> int:
     try:
-        contract = build_contract(args.repo)
+        extra = load_patterns(args.patterns) if args.patterns else None
+        contract = build_contract(args.repo, extra)
     except ValueError as exc:
         print(f"repo-contract: {exc}", file=sys.stderr)
         return 2
@@ -83,7 +87,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="repo-contract",
-        description="Read a repository's contribution contract before an agent contributes.",
+        description="Report a repository's AI policy, commands, commit style and PR rules.",
     )
     parser.add_argument("--version", action="version", version=f"repo-contract {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -104,6 +108,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--fail-if-forbidden",
         action="store_true",
         help="exit 3 when the repository forbids autonomous agents (CI gate mode)",
+    )
+    scan.add_argument(
+        "--patterns",
+        default=None,
+        metavar="FILE|es|de",
+        help="extra policy patterns: a JSON file, or a shipped set (es, de); English stays on",
     )
     scan.add_argument("--quiet", action="store_true", help="AI-policy verdict only")
     scan.set_defaults(func=cmd_scan)

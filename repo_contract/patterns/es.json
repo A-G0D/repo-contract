@@ -1,0 +1,10 @@
+[
+  {"language": "es", "category": "forbidden_autonomous", "label": "es-agentes-no-permitidos",
+   "pattern": "agentes? aut[oó]nomos?[^.]{0,60}(no (est[aá]n?|es|son) permitid[oa]s?|est[aá]n? prohibid[oa]s?|prohibid[oa]s?)"},
+  {"language": "es", "category": "forbidden_autonomous", "label": "es-contribuciones-ia",
+   "pattern": "(contribuciones|pull requests?|solicitudes de extracci[oó]n) generad[oa]s? (por|con) (IA|inteligencia artificial)[^.]{0,40}(no se aceptan|no (est[aá]n?|son) (permitid|aceptad)\\w+|est[aá]n? prohibid\\w+)"},
+  {"language": "es", "category": "human_in_loop", "label": "es-supervision-humana",
+   "pattern": "supervisi[oó]n humana|revisi[oó]n humana|responsable de (todo )?(el )?c[oó]digo|asistid[oa] por (IA|inteligencia artificial)"},
+  {"language": "es", "category": "disclosure", "label": "es-divulgacion",
+   "pattern": "(indica|declara|menciona|divulga)\\w* [^.]{0,40}(uso de )?(IA|inteligencia artificial)"}
+]

@@ -1,0 +1,10 @@
+[
+  {"language": "de", "category": "forbidden_autonomous", "label": "de-agenten-nicht-erlaubt",
+   "pattern": "autonome[nr]? (KI-)?(Agenten|Agent)[^.]{0,60}(nicht erlaubt|nicht gestattet|verboten|nicht zugelassen)"},
+  {"language": "de", "category": "forbidden_autonomous", "label": "de-ki-beitraege",
+   "pattern": "(KI-generierte|von (einer )?KI erstellte) (Beitr[aä]ge|Pull[- ]Requests?)[^.]{0,40}(nicht (erlaubt|akzeptiert|gestattet)|verboten|werden abgelehnt)"},
+  {"language": "de", "category": "human_in_loop", "label": "de-menschliche-kontrolle",
+   "pattern": "menschliche (Kontrolle|Aufsicht|Pr[uü]fung)|verantwortlich f[uü]r (den|jeden) (gesamten )?(Code|Beitrag)|KI-unterst[uü]tzt"},
+  {"language": "de", "category": "disclosure", "label": "de-offenlegung",
+   "pattern": "(offenlegen|angeben|kennzeichnen)[^.]{0,40}(KI|k[uü]nstliche Intelligenz)"}
+]

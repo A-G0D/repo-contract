@@ -38,6 +38,9 @@ Changelog = "https://github.com/A-G0D/repo-contract/blob/main/CHANGELOG.md"
 [tool.setuptools.packages.find]
 include = ["repo_contract*"]
 
+[tool.setuptools.package-data]
+repo_contract = ["patterns/*.json"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
