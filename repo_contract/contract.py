@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import re
 import subprocess
+from urllib.parse import urlsplit, urlunsplit
 
 from .docs import docs_text, find_docs, read_text, walk_files
 from .policy import classify, policy_sources
@@ -226,7 +227,14 @@ def detect_remote(repo: str) -> str:
         )
     except (OSError, subprocess.TimeoutExpired):
         return ""
-    return proc.stdout.strip() if proc.returncode == 0 else ""
+    if proc.returncode != 0:
+        return ""
+    url = proc.stdout.strip()
+    parts = urlsplit(url)
+    if parts.scheme in ("http", "https") and parts.username is not None:
+        # drop userinfo (user:token@) so credentials never reach the contract
+        url = urlunsplit(parts._replace(netloc=parts.netloc.rpartition("@")[2]))
+    return url
 
 
 def build_contract(repo: str, extra_patterns: dict | None = None) -> dict:
@@ -236,6 +244,7 @@ def build_contract(repo: str, extra_patterns: dict | None = None) -> dict:
         raise ValueError(f"not a directory: {repo}")
     docs = find_docs(repo)
     docs_txt = docs_text(repo, docs)
+    pr_txt = docs_text(repo, docs, headers=False)
     ai_policy = classify(docs_txt, extra_patterns)
     return {
         "repo": repo,
@@ -247,7 +256,7 @@ def build_contract(repo: str, extra_patterns: dict | None = None) -> dict:
         "workflows": workflow_files(repo),
         "commands": extract_commands(repo, docs_txt),
         "commit_style": detect_commit_style(repo),
-        "pr": detect_pr_rules(repo, docs, docs_txt),
+        "pr": detect_pr_rules(repo, docs, pr_txt),
         "changelog_files": [rel for rel, kind in docs.items() if kind == "changelog"],
         "generated_by": "repo-contract",
     }
@@ -260,7 +269,7 @@ def render_markdown(contract: dict) -> str:
         f"# Contribution contract: {contract['name']}",
         "",
         f"- repository: `{contract['repo']}`",
-        f"- remote: `{contract['remote'] or '(none)'}'",
+        f"- remote: `{contract['remote'] or '(none)'}`",
         f"- **agent contributions allowed: "
         f"{'YES' if ai['agent_contributions_allowed'] else 'NO'}** "
         f"(AI policy: `{ai['category']}`)",

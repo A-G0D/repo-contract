@@ -58,6 +58,8 @@ def find_docs(root: str) -> dict[str, str]:
     docs: dict[str, str] = {}
     for rel in walk_files(root):
         base = os.path.basename(rel)
+        if os.path.islink(os.path.join(root, rel)):
+            continue  # never follow symlinks into files outside the repo
         for pattern, kind in DOC_PATTERNS:
             if not (re.search(pattern, base) or re.search(pattern, rel)):
                 continue
@@ -70,18 +72,21 @@ def find_docs(root: str) -> dict[str, str]:
 
 def read_text(root: str, rel: str, limit: int = 60_000) -> str:
     """Read a document, returning an empty string when it is unreadable or binary."""
+    path = os.path.join(root, rel)
+    if os.path.islink(path):
+        return ""
     try:
-        with open(os.path.join(root, rel), encoding="utf-8", errors="ignore") as fh:
+        with open(path, encoding="utf-8", errors="ignore") as fh:
             return fh.read(limit)
     except OSError:
         return ""
 
 
-def docs_text(root: str, docs: dict[str, str], limit: int = 80_000) -> str:
-    """Concatenate contribution docs (not readmes) for rule mining."""
+def docs_text(root: str, docs: dict[str, str], limit: int = 80_000, headers: bool = True) -> str:
+    """Concatenate contribution docs (not readmes) for rule mining; ``headers=False`` omits the ``## path`` lines."""
     parts = []
     for rel, kind in docs.items():
         if kind in ("readme", "code_of_conduct", "issue_template"):
             continue
-        parts.append(f"## {rel}\n" + read_text(root, rel))
+        parts.append((f"## {rel}\n" if headers else "") + read_text(root, rel))
     return "\n\n".join(parts)[:limit]

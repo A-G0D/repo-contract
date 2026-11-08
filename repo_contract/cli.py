@@ -66,13 +66,17 @@ def cmd_scan(args: argparse.Namespace) -> int:
     else:
         print(_render_text(contract, quiet=args.quiet))
 
-    if args.json_out:
-        with open(args.json_out, "w", encoding="utf-8") as fh:
-            json.dump(contract, fh, indent=2)
-            fh.write("\n")
-    if args.markdown_out:
-        with open(args.markdown_out, "w", encoding="utf-8") as fh:
-            fh.write(render_markdown(contract))
+    try:
+        if args.json_out:
+            with open(args.json_out, "w", encoding="utf-8") as fh:
+                json.dump(contract, fh, indent=2)
+                fh.write("\n")
+        if args.markdown_out:
+            with open(args.markdown_out, "w", encoding="utf-8") as fh:
+                fh.write(render_markdown(contract))
+    except OSError as exc:
+        print(f"repo-contract: cannot write output: {exc}", file=sys.stderr)
+        return 2
 
     if not contract["ai_policy"]["agent_contributions_allowed"] and args.fail_if_forbidden:
         print(
