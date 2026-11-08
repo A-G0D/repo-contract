@@ -61,7 +61,9 @@ def find_docs(root: str) -> dict[str, str]:
         if os.path.islink(os.path.join(root, rel)):
             continue  # never follow symlinks into files outside the repo
         for pattern, kind in DOC_PATTERNS:
-            if not (re.search(pattern, base) or re.search(pattern, rel)):
+            # issue_template names the .github/ISSUE_TEMPLATE dir, so it matches the rel path
+            subject = rel if kind == "issue_template" else base
+            if not re.search(pattern, subject):
                 continue
             if kind in docs:
                 continue
