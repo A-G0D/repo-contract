@@ -234,6 +234,10 @@ def detect_remote(repo: str) -> str:
     if parts.scheme in ("http", "https") and parts.username is not None:
         # drop userinfo (user:token@) so credentials never reach the contract
         url = urlunsplit(parts._replace(netloc=parts.netloc.rpartition("@")[2]))
+    elif parts.scheme and parts.password is not None:
+        # other schemes (ssh://git:pw@): keep the login user, drop the password
+        host = parts.netloc.rpartition("@")[2]
+        url = urlunsplit(parts._replace(netloc=f"{parts.username}@{host}"))
     return url
 
 

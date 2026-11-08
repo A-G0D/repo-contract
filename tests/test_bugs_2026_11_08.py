@@ -50,6 +50,16 @@ class TestRemoteCredentialsStripped(unittest.TestCase):
         with mock.patch("repo_contract.contract.subprocess.run", return_value=out):
             self.assertEqual(detect_remote("/nonexistent"), "https://github.com/o/r.git")
 
+    def test_password_removed_from_ssh_remote_user_kept(self):
+        for url, want in (
+            ("ssh://git:pw@host.example/o/r.git\n", "ssh://git@host.example/o/r.git"),
+            ("ssh://git@host.example/o/r.git\n", "ssh://git@host.example/o/r.git"),
+            ("git@github.com:o/r.git\n", "git@github.com:o/r.git"),
+        ):
+            out = subprocess.CompletedProcess(args=[], returncode=0, stdout=url, stderr="")
+            with mock.patch("repo_contract.contract.subprocess.run", return_value=out):
+                self.assertEqual(detect_remote("/nonexistent"), want)
+
 
 class TestChangelogHeaderNotMatched(_TmpCase):
     def test_changelog_file_without_mention_does_not_require_entry(self):
