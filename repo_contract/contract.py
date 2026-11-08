@@ -266,19 +266,29 @@ def build_contract(repo: str, extra_patterns: dict | None = None) -> dict:
     }
 
 
+def _printable(value: object) -> str:
+    """Replace non-printable chars (ESC, BEL, CR, LF, ...) with a space for terminal/markdown output."""
+    return "".join(ch if ch.isprintable() else " " for ch in str(value))
+
+
+def _code(value: object) -> str:
+    """Quote an untrusted value as a markdown code span; backticks become quotes."""
+    return "`" + _printable(value).replace("`", "'") + "`"
+
+
 def render_markdown(contract: dict) -> str:
     """Render the contract as a reviewable Markdown document."""
     ai = contract["ai_policy"]
     lines = [
-        f"# Contribution contract: {contract['name']}",
+        f"# Contribution contract: {_code(contract['name'])}",
         "",
-        f"- repository: `{contract['repo']}`",
-        f"- remote: `{contract['remote'] or '(none)'}`",
+        f"- repository: {_code(contract['repo'])}",
+        f"- remote: {_code(contract['remote'] or '(none)')}",
         f"- **agent contributions allowed: "
         f"{'YES' if ai['agent_contributions_allowed'] else 'NO'}** "
-        f"(AI policy: `{ai['category']}`)",
-        f"- AI policy evidence: {ai['evidence'] or '(none found)'}",
-        *[f"  - {snip}" for snip in ai["evidence_snippets"][1:]],
+        f"(AI policy: {_code(ai['category'])})",
+        f"- AI policy evidence: {_code(ai['evidence']) if ai['evidence'] else '(none found)'}",
+        *[f"  - {_code(snip)}" for snip in ai["evidence_snippets"][1:]],
         f"- disclosure required: {ai['requires_disclosure']}",
         "",
         "## Commands",
@@ -286,13 +296,13 @@ def render_markdown(contract: dict) -> str:
     ]
     for kind in ("test", "lint", "build"):
         commands = contract["commands"][kind]
-        lines.append(f"- {kind}: " + (", ".join(f"`{c}`" for c in commands) or "—"))
+        lines.append(f"- {kind}: " + (", ".join(_code(c) for c in commands) or "—"))
     style = contract["commit_style"]
     lines += [
         "",
         "## Commit style",
         "",
-        f"- style: `{style['style']}` (samples: {style['n']}, "
+        f"- style: {_code(style['style'])} (samples: {style['n']}, "
         f"conventional ratio: {style['conventional_ratio']})",
         "",
         "## Pull-request rules",
@@ -303,7 +313,10 @@ def render_markdown(contract: dict) -> str:
         f"- changelog entry required: {contract['pr']['requires_changelog']}",
     ]
     if contract["pr"]["template_sections"]:
-        lines.append(f"- PR template sections: {', '.join(contract['pr']['template_sections'])}")
+        lines.append(
+            "- PR template sections: "
+            + ", ".join(_code(s) for s in contract["pr"]["template_sections"])
+        )
     lines += ["", "## Documents read", ""]
-    lines += [f"- `{rel}` ({kind})" for rel, kind in contract["docs"].items()]
+    lines += [f"- {_code(rel)} ({_code(kind)[1:-1]})" for rel, kind in contract["docs"].items()]
     return "\n".join(lines) + "\n"
