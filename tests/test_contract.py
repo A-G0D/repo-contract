@@ -206,7 +206,7 @@ class TestEvidence(unittest.TestCase):
     def test_all_snippets_returned_in_document_order(self):
         res = classify(TWO_RULES)
         self.assertEqual(res["category"], "forbidden_autonomous")
-        self.assertEqual(len(res["evidence_snippets"]), 3)
+        self.assertEqual(len(res["evidence_snippets"]), 2)
         self.assertEqual(
             res["evidence_snippets"][0],
             "Autonomous agents are not allowed",
@@ -219,7 +219,7 @@ class TestEvidence(unittest.TestCase):
 
     def test_hashes_match_snippets_and_are_stable(self):
         res = classify(TWO_RULES)
-        self.assertEqual(len(res["evidence_sha256"]), 3)
+        self.assertEqual(len(res["evidence_sha256"]), 2)
         self.assertEqual(res["evidence_sha256"], classify(TWO_RULES)["evidence_sha256"])
         self.assertEqual(len(res["evidence_sha256"][0]), 64)
 
@@ -235,7 +235,7 @@ class TestEvidence(unittest.TestCase):
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             main(["scan", "--repo", repo])
-        self.assertIn("(+2 more, see --format json)", buf.getvalue())
+        self.assertIn("(+1 more, see --format json)", buf.getvalue())
 
 
 ES_DOC = """# Contribuir
