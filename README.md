@@ -92,7 +92,8 @@ first snippet and `(+N more, see --format json)`.
 ### Other languages
 
 The built-in patterns are English. Add more with `--patterns`, which takes a JSON file or the name of
-a shipped set (`es`, `de`). Patterns are added to the English ones, not swapped in.
+a shipped set (`es`, `de`). A bare name with no path separator or extension always means the
+shipped set, even if a local file has that name; use `./es` for the file. Patterns are added to the English ones, not swapped in.
 
 ```json
 [
@@ -101,7 +102,9 @@ a shipped set (`es`, `de`). Patterns are added to the English ones, not swapped 
 ]
 ```
 
-`category` is `forbidden_autonomous`, `human_in_loop` or `disclosure`; `pattern` is a Python regex
+`category` is `forbidden_autonomous`, `human_in_loop` or `disclosure`, or the optional
+`ai_mention` (terms that count as mentioning AI, e.g. `\\bIA\\b`; case-sensitive unless the regex
+uses `(?i:...)`); `pattern` is a Python regex
 matched case-insensitively; `language` and `label` are for humans. A malformed file exits with 2.
 The shipped sets are small phrase lists tested on synthetic sentences only. They are not full
 language support, and wording they do not cover is reported as `unknown`.

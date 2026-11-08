@@ -55,7 +55,7 @@ AI_MENTION = re.compile(r"(?i)\bAI\b|\bLLMs?\b|\blanguage models?\b|ChatGPT|Copi
 
 
 SNIPPET_MAX = 400
-CATEGORIES = ("forbidden_autonomous", "human_in_loop", "disclosure")
+CATEGORIES = ("forbidden_autonomous", "human_in_loop", "disclosure", "ai_mention")
 
 
 def _matches(text: str, patterns: tuple[str, ...]) -> list[str]:
@@ -70,7 +70,9 @@ def _matches(text: str, patterns: tuple[str, ...]) -> list[str]:
     last_end = -1
     for start, end in spans:
         if start >= last_end:
-            out.append(text[start:end].strip()[:SNIPPET_MAX])
+            snippet = text[start:end].strip()[:SNIPPET_MAX]
+            if snippet not in out:
+                out.append(snippet)
             last_end = end
     return out
 
@@ -79,11 +81,13 @@ def load_patterns(source: str) -> dict[str, tuple[str, ...]]:
     """Load extra patterns from a JSON file or a shipped set name (``es``, ``de``).
 
     The file is a list of ``{language, category, pattern, label}`` objects; ``category`` is one of
-    ``forbidden_autonomous``, ``human_in_loop``, ``disclosure``. Raises ``ValueError`` on bad input.
+    ``forbidden_autonomous``, ``human_in_loop``, ``disclosure``, or ``ai_mention`` (optional: terms
+    that count as mentioning AI; matched case-sensitively unless the regex says ``(?i:...)``). Raises ``ValueError`` on bad input.
     """
-    path = source
-    if not os.path.isfile(path):
-        path = os.path.join(os.path.dirname(__file__), "patterns", f"{source}.json")
+    # A bare name (no separator, no extension) means a shipped set, even if a local file shares it.
+    shipped = os.path.join(os.path.dirname(__file__), "patterns", f"{source}.json")
+    bare = not os.path.splitext(source)[1] and os.path.basename(source) == source
+    path = shipped if bare and os.path.isfile(shipped) else source
     try:
         with open(path, encoding="utf-8") as fh:
             entries = json.load(fh)
@@ -120,6 +124,9 @@ def classify(text: str, extra: dict[str, tuple[str, ...]] | None = None) -> dict
     forbidden = FORBIDDEN_PATTERNS + extra.get("forbidden_autonomous", ())
     human = HUMAN_IN_LOOP_PATTERNS + extra.get("human_in_loop", ())
     disclosure = DISCLOSURE_PATTERNS + extra.get("disclosure", ())
+    mentions_ai = bool(AI_MENTION.search(text)) or any(
+        re.search(p, text) for p in extra.get("ai_mention", ())
+    )
     snippets = _matches(text, forbidden)
     if snippets:
         category = "forbidden_autonomous"
@@ -127,7 +134,7 @@ def classify(text: str, extra: dict[str, tuple[str, ...]] | None = None) -> dict
         snippets = _matches(text, human)
         if snippets:
             category = "human_in_loop"
-        elif AI_MENTION.search(text):
+        elif mentions_ai:
             category = "ai_mentioned"
         else:
             category = "unknown"
@@ -137,7 +144,7 @@ def classify(text: str, extra: dict[str, tuple[str, ...]] | None = None) -> dict
         "evidence_snippets": snippets,
         "evidence_sha256": [hashlib.sha256(s.encode("utf-8")).hexdigest() for s in snippets],
         "requires_disclosure": bool(_matches(text, disclosure)),
-        "mentions_ai": bool(AI_MENTION.search(text)),
+        "mentions_ai": mentions_ai,
         "agent_contributions_allowed": category != "forbidden_autonomous",
     }
 
