@@ -5,24 +5,11 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
 
-**Read a repository's contribution contract before an agent contributes.** One command tells you
-whether a repository permits autonomous or AI-assisted contributions, which commands its CI runs,
-what commit style it expects, and which PR requirements (issue, DCO, CLA, changelog) apply.
+Reads a repository's contribution docs and CI config and reports whether it allows AI or
+autonomous-agent contributions, which test/lint/build commands it uses, its commit style, and its PR
+rules (issue, DCO, CLA, changelog). The AI-policy verdict always quotes the matched text.
 
-```
-repo docs + CI ──► policy classifier ──► allowed / human-in-the-loop / forbidden (with evidence)
-                └► command miner      ──► test / lint / build commands
-                └► style miner        ──► commit style from the last 80 subjects
-                └► PR-rule detector   ──► issue / DCO / CLA / changelog / template sections
-```
-
-Agentic contributors need to read the instructions before they write. In 2026 that includes a real
-question: **does this repository permit autonomous agents at all?** Some projects explicitly forbid
-AI-generated contributions; sending an agent there wastes tokens, spams maintainers, and violates the
-project's rules. `repo-contract` answers that question from the repository's own words, quotes the
-evidence, and can fail a CI/pre-flight step when the answer is "no".
-
-Status: **alpha (0.1.0)**.
+Status: alpha (0.1.0). Standard library only, no network access, never writes to the scanned repo.
 
 ## Install
 
@@ -31,7 +18,7 @@ pip install git+https://github.com/A-G0D/repo-contract.git   # or: pip install -
 repo-contract --help
 ```
 
-Python 3.10+. No runtime dependencies; standard library only.
+Python 3.10+.
 
 ## Quickstart
 
@@ -48,7 +35,10 @@ repo-contract scan --repo /path/to/repo --markdown-out CONVENTIONS.md
 # 4. gate mode: exit 3 when the repository forbids autonomous agents
 repo-contract scan --repo /path/to/repo --fail-if-forbidden
 
-# 5. deterministic demo
+# 5. also match Spanish or German wording (or your own JSON file, see "Other languages")
+repo-contract scan --repo /path/to/repo --patterns es
+
+# 6. demo
 python3 demo/run_demo.py
 ```
 
@@ -78,13 +68,47 @@ returns one of:
 | `ai_mentioned` | AI is mentioned, no explicit allow/forbid rule found | allowed, ask maintainers if unsure |
 | `unknown` | no AI policy found | allowed |
 
-The finding always quotes the matched text as evidence, because the point is to make the repository's
-own wording visible — not to replace reading it. Classification is heuristic: if the evidence line
-looks ambiguous, read the linked document.
+The matched text is quoted as evidence. Classification is regex matching: if a quote looks
+ambiguous, read the document it came from.
+
+`ai_policy` in the JSON report:
+
+```json
+{
+  "category": "forbidden_autonomous",
+  "evidence": "Autonomous agents are not allowed",
+  "evidence_snippets": ["Autonomous agents are not allowed", "AI-generated pull requests are not accepted"],
+  "evidence_sha256": ["<sha256 of each snippet>", "..."],
+  "requires_disclosure": false,
+  "mentions_ai": true,
+  "agent_contributions_allowed": false
+}
+```
+
+`evidence_snippets` holds every match of the winning category across all docs, in document order, each
+cut at 400 characters; `evidence` is the first one (the only field in 0.1.0). Text output shows the
+first snippet and `(+N more, see --format json)`.
+
+### Other languages
+
+The built-in patterns are English. Add more with `--patterns`, which takes a JSON file or the name of
+a shipped set (`es`, `de`). Patterns are added to the English ones, not swapped in.
+
+```json
+[
+  {"language": "fr", "category": "forbidden_autonomous", "label": "fr-agents",
+   "pattern": "agents autonomes[^.]{0,60}(interdits|pas autoris[ée]s)"}
+]
+```
+
+`category` is `forbidden_autonomous`, `human_in_loop` or `disclosure`; `pattern` is a Python regex
+matched case-insensitively; `language` and `label` are for humans. A malformed file exits with 2.
+The shipped sets are small phrase lists tested on synthetic sentences only. They are not full
+language support, and wording they do not cover is reported as `unknown`.
 
 ## What it extracts
 
-- **AI policy** — category, evidence quote, whether disclosure is required, and which docs were read.
+- **AI policy** — category, evidence quotes, whether disclosure is required, and which docs were read.
 - **Commands** — test / lint / build commands mined from `.github/workflows/*` and contribution docs
   (raw YAML text, no YAML parser needed).
 - **Commit style** — `conventional`, `imperative`, `freeform` or `unknown`, with sample subjects and
@@ -123,9 +147,9 @@ forbidding policy before an agent is dispatched:
 ## Design rules
 
 1. **Quote, don't paraphrase.** Every policy verdict carries the matched evidence text.
-2. **Zero dependencies, offline.** Standard library only; no network calls.
-3. **Read-only.** The tool never writes to the target repository; `--json-out`/`--markdown-out` write
-   where you point them, and `--markdown-out CONVENTIONS.md` is an explicit choice made by the user.
+2. **Offline.** No network calls.
+3. **Read-only.** Nothing is written to the scanned repository; `--json-out` and `--markdown-out`
+   write only where you point them.
 4. **Conservative classification.** Only explicit prohibition text produces `forbidden_autonomous`;
    ambiguous mentions degrade to `ai_mentioned`/`unknown` rather than blocking a contribution.
 5. **No git history, no problem.** Commit-style mining degrades to `unknown` when `git log` is not
@@ -133,8 +157,8 @@ forbidding policy before an agent is dispatched:
 
 ## Limitations
 
-- Heuristic, English-language document parsing. A policy written only in an image, a wiki or a
-  language other than English will be missed; prefer the repository's own `AGENTS.md`/`AI_POLICY`.
+- Regex matching on English text by default; `--patterns` adds Spanish, German or your own phrases
+  (see above). A policy in an image, a wiki or any other language is missed.
 - PR-template sections are heading lines; unusual templates may yield few sections.
 - Commands are mined as text, not validated. Always run the repository's documented command yourself;
   `repo-contract` shows what the project says, it does not execute it.

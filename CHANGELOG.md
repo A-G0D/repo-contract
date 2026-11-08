@@ -6,8 +6,15 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+### Added
+- `ai_policy.evidence_snippets` (every matched snippet, document order) and
+  `ai_policy.evidence_sha256` (hash of each). `evidence` is unchanged: the first snippet. Text output
+  shows `(+N more, see --format json)`; Markdown output lists the extra snippets. (#3)
+- `scan --patterns FILE|es|de`: opt-in extra policy patterns from a JSON file, plus shipped Spanish
+  and German sets. Bad files exit 2. The English default is unchanged. (#4)
+
 ### Planned
-- Markdown/JSON config for custom policy patterns and additional document names.
+- Additional document names.
 - Optional `--require-clean` check that verifies the repository has a README, CONTRIBUTING and CI
   before an agent is dispatched.
 - Language-aware policy detection for non-English contribution docs (currently English-only).
