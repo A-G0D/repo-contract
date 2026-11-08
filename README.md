@@ -35,7 +35,7 @@ repo-contract scan --repo /path/to/repo --markdown-out CONVENTIONS.md
 # 4. gate mode: exit 3 when the repository forbids autonomous agents
 repo-contract scan --repo /path/to/repo --fail-if-forbidden
 
-# 5. also match Spanish or German wording (or your own JSON file, see "Other languages")
+# 5. also match Spanish wording (use `de` for German, or a JSON file; see "Other languages")
 repo-contract scan --repo /path/to/repo --patterns es
 
 # 6. demo
@@ -160,7 +160,7 @@ forbidding policy before an agent is dispatched:
 
 ## Limitations
 
-- Regex matching on English text by default; `--patterns` adds Spanish, German or your own phrases
+- Regex matching on English text by default; `--patterns es` or `de` adds Spanish or German, and a JSON file adds your own phrases
   (see above). A policy in an image, a wiki or any other language is missed.
 - PR-template sections are heading lines; unusual templates may yield few sections.
 - Commands are mined as text, not validated. Always run the repository's documented command yourself;
