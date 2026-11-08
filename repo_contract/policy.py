@@ -53,6 +53,38 @@ DISCLOSURE_PATTERNS: tuple[str, ...] = (
 
 AI_MENTION = re.compile(r"(?i)\bAI\b|\bLLMs?\b|\blanguage models?\b|ChatGPT|Copilot|Claude")
 
+# Possible AI bans, shown for a human check, not enforced: word co-occurrence alone gave 3 false
+# bans on 24 unseen docs. Each sentence needs an AI term (or human-written phrasing), a refusal,
+# and a contribution word; any exception or product topic clears it (see _possible_ai_bans).
+_SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9*`\"'\[(])|\n+")
+_AI_TERM = re.compile(
+    r"\b(?:AI|LLMs?|language models?|generative|ChatGPT|Copilot|Claude|artificial intelligence"
+    r"|(?:autonomous|automated) agents?|machine[- ]generated|human[- ](?:written|authored))\b",
+    re.I,
+)
+_REFUSAL = re.compile(
+    r"(?:\b(?:forbidden|prohibited|banned|not accept\w*|reject\w*|decline\w*|closed"
+    r"|must not|not allowed|not permitted|may not|must be (?:only )?human[- ](?:written|authored))\b"
+    r"|n't accept\w*)",
+    re.I,
+)
+_CONTRIB = re.compile(
+    r"\bcontribut\w*|\bpull requests?\b|\bPRs?\b|\bpatch\w*|\bcode\b|\bcontent\b|\bcommit\w*"
+    r"|\bsubmit\w*|\bissues?\b",
+    re.I,
+)
+_EXCEPT = re.compile(
+    r"\b(?:unless|except|if you|(?:may|can) be|must disclose|must review|responsib\w*|understand\w*"
+    r"|disclos\w*|unreview\w*|lack\w*|without (?:review|disclos\w*))\b",
+    re.I,
+)
+# An AI feature or product is not an AI contribution.
+_PRODUCT = re.compile(
+    r"\b(?:AI|LLMs?|language models?|generative|ChatGPT|Copilot|Claude|artificial intelligence)"
+    r"\s+(?:features?|products?|integrations?)\b",
+    re.I,
+)
+
 
 SNIPPET_MAX = 400
 CATEGORIES = ("forbidden_autonomous", "human_in_loop", "disclosure", "ai_mention")
@@ -114,11 +146,28 @@ def load_patterns(source: str) -> dict[str, tuple[str, ...]]:
     return {c: tuple(v) for c, v in extra.items()}
 
 
+def _possible_ai_bans(text: str) -> list[str]:
+    """Sentences that may bar AI-generated or autonomous-agent contributions, in document order."""
+    out: list[str] = []
+    for sentence in _SENTENCE_SPLIT.split(text):
+        s = sentence.strip()
+        plain = s.replace("*", "").replace("`", "")  # "**human written**" is still human written
+        if not s or _EXCEPT.search(plain) or _PRODUCT.search(plain):
+            continue
+        if _AI_TERM.search(plain) and _REFUSAL.search(plain) and _CONTRIB.search(plain):
+            # a hostile doc must not drive the reader's terminal
+            snippet = "".join(c if c.isprintable() else " " for c in s[:SNIPPET_MAX])
+            if snippet not in out:
+                out.append(snippet)
+    return out
+
+
 def classify(text: str, extra: dict[str, tuple[str, ...]] | None = None) -> dict:
     """Classify docs text. ``extra`` adds opt-in patterns (see ``load_patterns``).
 
     ``evidence`` is the first snippet (0.1.0 contract); ``evidence_snippets`` holds all of them in
     document order and ``evidence_sha256`` their hashes, so reports compare across scans.
+    ``review_sentences`` lists possible AI bans for a human to check; it never changes ``category``.
     """
     extra = extra or {}
     forbidden = FORBIDDEN_PATTERNS + extra.get("forbidden_autonomous", ())
@@ -146,6 +195,7 @@ def classify(text: str, extra: dict[str, tuple[str, ...]] | None = None) -> dict
         "requires_disclosure": bool(_matches(text, disclosure)),
         "mentions_ai": mentions_ai,
         "agent_contributions_allowed": category != "forbidden_autonomous",
+        "review_sentences": [] if category == "forbidden_autonomous" else _possible_ai_bans(text),
     }
 
 

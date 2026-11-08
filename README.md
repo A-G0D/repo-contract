@@ -113,7 +113,7 @@ language support, and wording they do not cover is reported as `unknown`.
 
 ## What it extracts
 
-- **AI policy** — category, evidence quotes, whether disclosure is required, and which docs were read.
+- **AI policy** — category, evidence quotes, whether disclosure is required, and which docs were read. Sentences that may be an AI ban are listed as `review_sentences` for a human to check; they never change the category or exit code.
 - **Commands** — test / lint / build commands mined from `.github/workflows/*` and contribution docs
   (raw YAML text, no YAML parser needed).
 - **Commit style** — `conventional`, `imperative`, `freeform` or `unknown`, with sample subjects and
