@@ -26,7 +26,7 @@ Python 3.10+.
 # 1. print the contribution contract for a repository
 repo-contract scan --repo /path/to/repo
 
-# 2. machine-readable contract
+# 2. machine-readable contract (`--format markdown` prints Markdown to stdout instead)
 repo-contract scan --repo /path/to/repo --format json > contract.json
 
 # 3. write the contract as a Markdown document (e.g. CONVENTIONS.md)
@@ -53,7 +53,8 @@ repo-contract: click (/repos/click)
   docs read: CONTRIBUTING.rst, README.rst, .github/pull_request_template.md
 ```
 
-Exit codes: **0** scanned (policy allows or is unknown), **2** unreadable repository, **3** policy
+Exit codes: **0** scanned (policy allows or is unknown), **2** the `--repo` path is not a directory, a
+`--patterns` file is invalid, or a `--json-out`/`--markdown-out` file cannot be written, **3** policy
 forbids autonomous agents (only with `--fail-if-forbidden`).
 
 ## The AI-policy gate
@@ -92,8 +93,9 @@ first snippet and `(+N more, see --format json)`.
 ### Other languages
 
 The built-in patterns are English. Add more with `--patterns`, which takes a JSON file or the name of
-a shipped set (`es`, `de`). A bare name with no path separator or extension always means the
-shipped set, even if a local file has that name; use `./es` for the file. Patterns are added to the English ones, not swapped in.
+a shipped set (`es`, `de`). A bare name that matches a shipped set always means that set, even if a
+local file has that name; use `./es` for the file. Any other bare name is read as a local file.
+Patterns are added to the English ones, not swapped in.
 
 ```json
 [
@@ -111,7 +113,7 @@ language support, and wording they do not cover is reported as `unknown`.
 
 ## What it extracts
 
-- **AI policy** — category, evidence quotes, whether disclosure is required, and which docs were read.
+- **AI policy** — category, evidence quotes, whether disclosure is required, and which docs were read. Sentences that may be an AI ban are listed as `review_sentences` for a human to check; they never change the category or exit code.
 - **Commands** — test / lint / build commands mined from `.github/workflows/*` and contribution docs
   (raw YAML text, no YAML parser needed).
 - **Commit style** — `conventional`, `imperative`, `freeform` or `unknown`, with sample subjects and

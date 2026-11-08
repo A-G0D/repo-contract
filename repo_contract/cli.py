@@ -28,6 +28,10 @@ def _render_text(contract: dict, *, quiet: bool = False) -> str:
         more = len(ai["evidence_snippets"]) - 1
         suffix = f" (+{more} more, see --format json)" if more > 0 else ""
         lines.append(f"  evidence: {ai['evidence']}{suffix}")
+    if ai["review_sentences"]:
+        more = len(ai["review_sentences"]) - 1
+        suffix = f" (+{more} more, see --format json)" if more > 0 else ""
+        lines.append(f"  check by hand, possible AI ban: {ai['review_sentences'][0]}{suffix}")
     if not quiet:
         if contract["policy_sources"]:
             lines.append(f"  policy docs: {', '.join(contract['policy_sources'])}")

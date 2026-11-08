@@ -75,7 +75,8 @@ def find_docs(root: str) -> dict[str, str]:
 def read_text(root: str, rel: str, limit: int = 60_000) -> str:
     """Read a document, returning an empty string when it is unreadable or binary."""
     path = os.path.join(root, rel)
-    if os.path.islink(path):
+    # not a regular file (symlink, FIFO, socket): opening a FIFO would block forever
+    if os.path.islink(path) or not os.path.isfile(path):
         return ""
     try:
         with open(path, encoding="utf-8", errors="ignore") as fh:

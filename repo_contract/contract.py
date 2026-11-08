@@ -279,6 +279,11 @@ def render_markdown(contract: dict) -> str:
         f"(AI policy: `{ai['category']}`)",
         f"- AI policy evidence: {ai['evidence'] or '(none found)'}",
         *[f"  - {snip}" for snip in ai["evidence_snippets"][1:]],
+        # a code span keeps untrusted links and HTML inert
+        *[
+            "- check by hand, possible AI ban: `" + snip.replace("`", "'") + "`"
+            for snip in ai["review_sentences"]
+        ],
         f"- disclosure required: {ai['requires_disclosure']}",
         "",
         "## Commands",
