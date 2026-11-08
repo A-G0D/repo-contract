@@ -8,7 +8,7 @@ import os
 import sys
 
 from . import __version__
-from .contract import build_contract, render_markdown
+from .contract import _printable, build_contract, render_markdown
 from .policy import load_patterns
 
 EXIT_FORBIDDEN = 3
@@ -20,28 +20,31 @@ def _render_text(contract: dict, *, quiet: bool = False) -> str:
     style = contract["commit_style"]
     pr = contract["pr"]
     lines = [
-        f"repo-contract: {contract['name']} ({contract['repo']})",
-        f"  AI policy: {ai['category']} — agent contributions: "
+        f"repo-contract: {_printable(contract['name'])} ({_printable(contract['repo'])})",
+        f"  AI policy: {_printable(ai['category'])} — agent contributions: "
         f"{'allowed' if ai['agent_contributions_allowed'] else 'FORBIDDEN'}",
     ]
     if ai["evidence"]:
         more = len(ai["evidence_snippets"]) - 1
         suffix = f" (+{more} more, see --format json)" if more > 0 else ""
-        lines.append(f"  evidence: {ai['evidence']}{suffix}")
-    if ai["review_sentences"]:
-        more = len(ai["review_sentences"]) - 1
+        lines.append(f"  evidence: {_printable(ai['evidence'])}{suffix}")
+    review = ai.get("review_sentences") or []  # a contract saved before this field has none
+    if review:
+        more = len(review) - 1
         suffix = f" (+{more} more, see --format json)" if more > 0 else ""
-        lines.append(f"  check by hand, possible AI ban: {ai['review_sentences'][0]}{suffix}")
+        lines.append(f"  check by hand, possible AI ban: {review[0]}{suffix}")
     if not quiet:
         if contract["policy_sources"]:
-            lines.append(f"  policy docs: {', '.join(contract['policy_sources'])}")
+            lines.append(
+                "  policy docs: " + ", ".join(_printable(s) for s in contract["policy_sources"])
+            )
         lines.append(
-            f"  commands: test={'`' + commands['test'][0] + '`' if commands['test'] else '—'}"
-            f" lint={'`' + commands['lint'][0] + '`' if commands['lint'] else '—'}"
-            f" build={'`' + commands['build'][0] + '`' if commands['build'] else '—'}"
+            f"  commands: test={'`' + _printable(commands['test'][0]) + '`' if commands['test'] else '—'}"
+            f" lint={'`' + _printable(commands['lint'][0]) + '`' if commands['lint'] else '—'}"
+            f" build={'`' + _printable(commands['build'][0]) + '`' if commands['build'] else '—'}"
         )
         lines.append(
-            f"  commit style: {style['style']} "
+            f"  commit style: {_printable(style['style'])} "
             f"({style['n']} samples, conventional ratio {style['conventional_ratio']})"
         )
         lines.append(
@@ -49,7 +52,7 @@ def _render_text(contract: dict, *, quiet: bool = False) -> str:
             f"cla={pr['requires_cla']} changelog={pr['requires_changelog']}"
         )
         if contract["docs"]:
-            lines.append("  docs read: " + ", ".join(contract["docs"]))
+            lines.append("  docs read: " + ", ".join(_printable(d) for d in contract["docs"]))
     else:
         lines = lines[:2]
     return "\n".join(lines)
