@@ -39,6 +39,12 @@ class ProposalDocBasenameTests(unittest.TestCase):
             self.assertEqual(found.get("SECURITY.md"), "security")
             self.assertIn(".github/ISSUE_TEMPLATE/bug_report.md", found)
 
+    def test_pr_template_dir_file_is_pr_template(self):
+        with tempfile.TemporaryDirectory() as root:
+            _touch(root, ".github/PULL_REQUEST_TEMPLATE/feature.md")
+            found = find_docs(root)
+            self.assertEqual(found.get(".github/PULL_REQUEST_TEMPLATE/feature.md"), "pr_template")
+
 
 if __name__ == "__main__":
     unittest.main()
