@@ -192,6 +192,7 @@ class TestContract(unittest.TestCase):
         with self.assertRaises(ValueError):
             build_contract(os.path.join(self.tmp, "does-not-exist"))
 
+
 TWO_RULES = """# Contributing
 
 Autonomous agents are not allowed to be used for contributing to this project.
@@ -279,8 +280,12 @@ class TestPatterns(unittest.TestCase):
         self.assertFalse(res["agent_contributions_allowed"])
 
     def test_malformed_file_raises_value_error(self):
-        for text in ("not json", "{}", '[{"category": "bogus", "pattern": "x"}]',
-                     '[{"category": "human_in_loop", "pattern": "("}]'):
+        for text in (
+            "not json",
+            "{}",
+            '[{"category": "bogus", "pattern": "x"}]',
+            '[{"category": "human_in_loop", "pattern": "("}]',
+        ):
             with self.assertRaises(ValueError, msg=text):
                 load_patterns(self._write("bad.json", text))
 
@@ -344,28 +349,41 @@ class TestCli(unittest.TestCase):
         self.assertEqual(main(["scan", "--repo", os.path.join(self.tmp, "nope")]), 2)
 
 
-
 class TestLocalizedSets(unittest.TestCase):
     def _disc(self, name, text):
         return classify(text, load_patterns(name))["requires_disclosure"]
 
     def test_es_disclosure_moods(self):
-        for t in ("Divulgue el uso de IA.", "Indique si usó inteligencia artificial.",
-                  "Declare el uso de IA.", "Mencione la IA usada.", "Divulguen el uso de IA.",
-                  "Indiquen el uso de IA.", "Se indica el uso de IA."):
+        for t in (
+            "Divulgue el uso de IA.",
+            "Indique si usó inteligencia artificial.",
+            "Declare el uso de IA.",
+            "Mencione la IA usada.",
+            "Divulguen el uso de IA.",
+            "Indiquen el uso de IA.",
+            "Se indica el uso de IA.",
+        ):
             self.assertTrue(self._disc("es", t), t)
         self.assertFalse(self._disc("es", "Declare que es historia."))
 
     def test_de_disclosure_forms(self):
-        for t in ("Geben Sie die Nutzung von KI an.", "Legen Sie die KI-Nutzung offen.",
-                  "KI-Nutzung bitte kennzeichnen.", "Die Kennzeichnung von KI ist Pflicht.",
-                  "KI muss angegeben werden."):
+        for t in (
+            "Geben Sie die Nutzung von KI an.",
+            "Legen Sie die KI-Nutzung offen.",
+            "KI-Nutzung bitte kennzeichnen.",
+            "Die Kennzeichnung von KI ist Pflicht.",
+            "KI muss angegeben werden.",
+        ):
             self.assertTrue(self._disc("de", t), t)
 
     def test_ai_mention_localized(self):
         self.assertEqual(classify("Usamos IA aqui.")["category"], "unknown")
-        for name, t in (("es", "Usamos IA aqui."), ("es", "Usamos inteligencia artificial."),
-                        ("de", "Wir nutzen KI."), ("de", "Künstliche Intelligenz hilft.")):
+        for name, t in (
+            ("es", "Usamos IA aqui."),
+            ("es", "Usamos inteligencia artificial."),
+            ("de", "Wir nutzen KI."),
+            ("de", "Künstliche Intelligenz hilft."),
+        ):
             r = classify(t, load_patterns(name))
             self.assertEqual((r["category"], r["mentions_ai"]), ("ai_mentioned", True), t)
         self.assertFalse(classify("La historia y la dia.", load_patterns("es"))["mentions_ai"])
@@ -384,6 +402,7 @@ class TestLocalizedSets(unittest.TestCase):
             fh.write("not json")
         os.chdir(tmp)
         self.assertTrue(load_patterns("es")["disclosure"])
+
 
 if __name__ == "__main__":
     unittest.main()

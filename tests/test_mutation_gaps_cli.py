@@ -196,9 +196,7 @@ class PrRuleTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             with open(os.path.join(tmp, "PULL_REQUEST_TEMPLATE.md"), "w", encoding="utf-8") as fh:
                 fh.write(text)
-            return contract.detect_pr_rules(
-                tmp, {"PULL_REQUEST_TEMPLATE.md": "pr_template"}, ""
-            )
+            return contract.detect_pr_rules(tmp, {"PULL_REQUEST_TEMPLATE.md": "pr_template"}, "")
 
     def test_headings_are_sections_not_instructions(self):
         rules = self._with_template("# Summary\n\nExplain the change in detail.\n")
@@ -206,7 +204,9 @@ class PrRuleTests(unittest.TestCase):
         self.assertEqual(rules["template_instructions"], ["Explain the change in detail."])
 
     def test_html_comments_are_not_instructions(self):
-        rules = self._with_template("<!-- hidden comment line here -->\nVisible instruction text.\n")
+        rules = self._with_template(
+            "<!-- hidden comment line here -->\nVisible instruction text.\n"
+        )
         self.assertEqual(rules["template_instructions"], ["Visible instruction text."])
 
     def test_instruction_min_length_is_sixteen(self):
@@ -233,7 +233,9 @@ class RemoteTests(unittest.TestCase):
         )
 
     def test_ssh_keeps_login_user_drops_password(self):
-        self.assertEqual(self._remote("ssh://git:pw@example.com/r.git"), "ssh://git@example.com/r.git")
+        self.assertEqual(
+            self._remote("ssh://git:pw@example.com/r.git"), "ssh://git@example.com/r.git"
+        )
 
 
 class MarkdownTests(unittest.TestCase):

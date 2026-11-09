@@ -17,7 +17,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from repo_contract import docs as docs_mod
 from repo_contract.cli import main
-from repo_contract.contract import _command_candidates, detect_commit_style, detect_remote, workflow_files
+from repo_contract.contract import (
+    _command_candidates,
+    detect_commit_style,
+    detect_remote,
+    workflow_files,
+)
 from repo_contract.docs import find_docs, read_text, walk_files
 from repo_contract.policy import load_patterns
 
@@ -127,7 +132,9 @@ class TestGitProbeEdges(unittest.TestCase):
         self.assertEqual(detect_commit_style(self.tmp)["style"], "unknown")
 
     def test_commit_style_freeform(self):
-        out = subprocess.CompletedProcess(args=[], returncode=0, stdout="wip\nmisc\nstuff\n", stderr="")
+        out = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="wip\nmisc\nstuff\n", stderr=""
+        )
         with mock.patch("repo_contract.contract.subprocess.run", return_value=out):
             self.assertEqual(detect_commit_style(self.tmp)["style"], "freeform")
 

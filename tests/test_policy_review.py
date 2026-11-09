@@ -82,7 +82,9 @@ class ReviewOutputTests(unittest.TestCase):
         with open(os.path.join(self.repo, "CONTRIBUTING.md"), "w", encoding="utf-8") as fh:
             fh.write("AI code is not allowed `x` [click](http://evil) <img src=x>\n")
         line = next(
-            ln for ln in render_markdown(build_contract(self.repo)).splitlines() if "check by hand" in ln
+            ln
+            for ln in render_markdown(build_contract(self.repo)).splitlines()
+            if "check by hand" in ln
         )
         quoted = line.split(": ", 1)[1]
         self.assertTrue(quoted.startswith("`") and quoted.endswith("`"), line)

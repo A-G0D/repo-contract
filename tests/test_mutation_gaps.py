@@ -48,9 +48,7 @@ class DocsGapTests(unittest.TestCase):
     def test_docs_text_excludes_readme(self):
         _write(self.root, "README.md", "README ONLY TEXT\n")
         _write(self.root, "CONTRIBUTING.md", "contribute here\n")
-        out = docs.docs_text(
-            self.root, {"README.md": "readme", "CONTRIBUTING.md": "contributing"}
-        )
+        out = docs.docs_text(self.root, {"README.md": "readme", "CONTRIBUTING.md": "contributing"})
         self.assertNotIn("README ONLY TEXT", out)
         self.assertIn("contribute here", out)
 
@@ -58,9 +56,7 @@ class DocsGapTests(unittest.TestCase):
         # Two 60k docs (read_text's own cap) exceed the 80k default, so the join must be cut.
         _write(self.root, "CONTRIBUTING.md", "c" * 60_000)
         _write(self.root, "AGENTS.md", "a" * 60_000)
-        out = docs.docs_text(
-            self.root, {"CONTRIBUTING.md": "contributing", "AGENTS.md": "agents"}
-        )
+        out = docs.docs_text(self.root, {"CONTRIBUTING.md": "contributing", "AGENTS.md": "agents"})
         self.assertEqual(len(out), 80_000)
 
 
@@ -73,9 +69,7 @@ class PolicyGapTests(unittest.TestCase):
         self._tmp.cleanup()
 
     def test_whitespace_only_match_is_not_evidence(self):
-        result = policy.classify(
-            "hello world", extra={"forbidden_autonomous": (" ",)}
-        )
+        result = policy.classify("hello world", extra={"forbidden_autonomous": (" ",)})
         self.assertEqual(result["category"], "unknown")
         self.assertEqual(result["evidence_snippets"], [])
 
@@ -85,9 +79,7 @@ class PolicyGapTests(unittest.TestCase):
         self.assertEqual(result["evidence_snippets"], ["a", "b"])
 
     def test_snippet_truncated_to_snippet_max(self):
-        result = policy.classify(
-            "x" * 500, extra={"forbidden_autonomous": ("x+",)}
-        )
+        result = policy.classify("x" * 500, extra={"forbidden_autonomous": ("x+",)})
         self.assertEqual(len(result["evidence"]), policy.SNIPPET_MAX)
 
     def test_no_evidence_is_empty_string(self):
@@ -102,8 +94,14 @@ class PolicyGapTests(unittest.TestCase):
         local = os.path.join(sub, "es")
         with open(local, "w", encoding="utf-8") as fh:
             json.dump(
-                [{"language": "en", "category": "forbidden_autonomous",
-                  "pattern": "zzz-local-only", "label": "local"}],
+                [
+                    {
+                        "language": "en",
+                        "category": "forbidden_autonomous",
+                        "pattern": "zzz-local-only",
+                        "label": "local",
+                    }
+                ],
                 fh,
             )
         loaded = policy.load_patterns(local)
@@ -127,9 +125,7 @@ class PolicyGapTests(unittest.TestCase):
             "CONTRIBUTING.md": "contributing",
             "AGENTS.md": "agents",
         }
-        self.assertEqual(
-            sorted(policy.policy_sources(docs_map)), ["AGENTS.md", "CONTRIBUTING.md"]
-        )
+        self.assertEqual(sorted(policy.policy_sources(docs_map)), ["AGENTS.md", "CONTRIBUTING.md"])
 
 
 class ContractGapTests(unittest.TestCase):
@@ -182,9 +178,7 @@ class ContractGapTests(unittest.TestCase):
             "Describe your change in detail here\n"
             "the comment block closes on this line -->\n",
         )
-        rules = contract.detect_pr_rules(
-            self.root, {"PULL_REQUEST_TEMPLATE.md": "pr_template"}, ""
-        )
+        rules = contract.detect_pr_rules(self.root, {"PULL_REQUEST_TEMPLATE.md": "pr_template"}, "")
         self.assertEqual(rules["template_instructions"], ["Describe your change in detail here"])
 
     def test_detect_remote_leaves_plain_https_url_alone(self):
@@ -192,9 +186,7 @@ class ContractGapTests(unittest.TestCase):
             args=[], returncode=0, stdout="https://github.com/acme/repo.git\n", stderr=""
         )
         with mock.patch.object(contract.subprocess, "run", return_value=proc):
-            self.assertEqual(
-                contract.detect_remote(self.root), "https://github.com/acme/repo.git"
-            )
+            self.assertEqual(contract.detect_remote(self.root), "https://github.com/acme/repo.git")
 
     def test_build_contract_reports_changelog_files(self):
         _write(self.root, "CHANGELOG.md", "# changes\n")
